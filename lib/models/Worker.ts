@@ -75,7 +75,6 @@ const workerSchema = new Schema(
 
 workerSchema.index({ category: 1 });
 workerSchema.index({ isAvailable: 1 });
-workerSchema.index({ email: 1 });
 
 export type Worker = InferSchemaType<typeof workerSchema>;
 export const WorkerModel = models.Worker || model("Worker", workerSchema);
