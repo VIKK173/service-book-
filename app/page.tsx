@@ -328,22 +328,102 @@ export default function Home() {
     setIsBookModalOpen(true);
   };
 
-  const placeOrder = () => {
-    const newOrder = {
-      id: `#SH${1000 + orders.length + 1}`,
-      service: selSvc.name,
-      sub: bData.sub.n,
-      date: bData.date,
-      time: bData.time,
-      pro: bData.pro,
-      price: bData.sub.p + Math.round(bData.sub.p * 0.05),
-      status: "confirmed",
-      img: selSvc.img,
-      createdAt: new Date().toLocaleDateString('en-IN')
-    };
-    setOrders([newOrder, ...orders]);
-    setBStep(6);
-    showToast("Order placed successfully!");
+  const placeOrder = async () => {
+    if (!user) {
+      showToast("Please sign in to place an order");
+      router.push("/sign-in");
+      return;
+    }
+
+    if (!selSvc || !bData.sub) {
+      showToast("Please complete booking details");
+      return;
+    }
+
+    const totalAmount = bData.sub.p + Math.round(bData.sub.p * 0.05);
+    
+    try {
+      // Save booking to database
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          userEmail: user.primaryEmailAddress?.emailAddress,
+          userName: user.fullName,
+          serviceName: selSvc.name,
+          serviceCategory: selSvc.cat,
+          subService: bData.sub.n,
+          amount: totalAmount,
+          bookingDate: bData.date,
+          timeSlot: bData.time,
+          address: {
+            flat: bData.addr.flat,
+            area: bData.addr.flat,
+            city: bData.addr.city,
+            pin: bData.addr.pin,
+            phone: bData.addr.phone,
+          },
+          notes: `Professional: ${bData.pro}`,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.booking) {
+        // Also save to localStorage for immediate display
+        const newOrder = {
+          id: result.booking.bookingCode || `#SH${1000 + orders.length + 1}`,
+          service: selSvc.name,
+          sub: bData.sub.n,
+          date: bData.date,
+          time: bData.time,
+          pro: bData.pro,
+          price: totalAmount,
+          status: result.booking.status,
+          img: selSvc.img,
+          createdAt: new Date().toLocaleDateString('en-IN')
+        };
+        setOrders([newOrder, ...orders]);
+        setBStep(6);
+        showToast("Booking confirmed! Check your dashboard for details.");
+      } else {
+        // Fallback to localStorage only
+        const newOrder = {
+          id: `#SH${1000 + orders.length + 1}`,
+          service: selSvc.name,
+          sub: bData.sub.n,
+          date: bData.date,
+          time: bData.time,
+          pro: bData.pro,
+          price: totalAmount,
+          status: "confirmed",
+          img: selSvc.img,
+          createdAt: new Date().toLocaleDateString('en-IN')
+        };
+        setOrders([newOrder, ...orders]);
+        setBStep(6);
+        showToast("Order placed successfully!");
+      }
+    } catch (error) {
+      console.error("Booking error:", error);
+      // Fallback to localStorage on error
+      const newOrder = {
+        id: `#SH${1000 + orders.length + 1}`,
+        service: selSvc.name,
+        sub: bData.sub.n,
+        date: bData.date,
+        time: bData.time,
+        pro: bData.pro,
+        price: totalAmount,
+        status: "confirmed",
+        img: selSvc.img,
+        createdAt: new Date().toLocaleDateString('en-IN')
+      };
+      setOrders([newOrder, ...orders]);
+      setBStep(6);
+      showToast("Order placed (saved locally)");
+    }
   };
 
   const handleLogout = async () => {
@@ -352,6 +432,10 @@ export default function Home() {
     setDashPanel("overview");
     setIsProfileDropdownOpen(false);
     showToast("Signed out");
+  };
+
+  const showOrderTracking = (orderId: string) => {
+    window.open(`/track/${orderId}`, '_blank');
   };
 
   const resetBookingState = () => {
@@ -1781,11 +1865,22 @@ Hello! I have booked a ${lastOrder.service} service (${lastOrder.sub}) through S
                                          <div className="text-[10px] sm:text-xs text-slate2-400">{o.date} · {o.time}</div>
                                      </div>
                                      <div className="text-right flex flex-col items-end gap-1.5 sm:gap-2">
-                                         <div className="font-bold text-slate-900 text-sm sm:text-base">₹{o.price}</div>
-                                         <div className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${o.status === 'reviewed' ? 'bg-emerald-100 text-emerald-700' : 'bg-green-100 text-green-700'}`}>
-                                             {o.status === 'reviewed' ? '✓ Reviewed' : o.status}
+                                         <button
+                                             onClick={() => showOrderTracking(o.id)}
+                                             className="text-xs font-bold text-brand-600 hover:text-brand-700 mb-1"
+                                         >
+                                             Track Order
+                                         </button>
+                                         <div className="font-bold text-slate2-900 text-sm sm:text-base">₹{o.price}</div>
+                                         <div className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                             o.status === "completed" ? "bg-emerald-100 text-emerald-700" :
+                                             o.status === "confirmed" ? "bg-brand-100 text-brand-700" :
+                                             o.status === "pending" ? "bg-amber-100 text-amber-700" :
+                                             "bg-slate2-100 text-slate2-600"
+                                         }`}>
+                                             {o.status.charAt(0).toUpperCase() + o.status.slice(1)}
                                          </div>
-                                         {(o.status === 'confirmed' || o.status === 'completed') && o.status !== 'reviewed' && (
+                                         {(o.status === "confirmed" || o.status === "completed") && o.status !== "reviewed" && (
                                              <button
                                                  onClick={() => {
                                                      setFeedbackOrderId(o.id);

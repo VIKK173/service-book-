@@ -1734,6 +1734,7 @@ export default function AdminDashboardClient({ admin, initialData }: Props) {
             <AdminLogoutButton />
           </div>
         </aside>
-      </section>
+      </div>
+    </div>
     );
   }

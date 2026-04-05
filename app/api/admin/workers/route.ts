@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 
 import { PROS } from "@/lib/data";
 import { connectToDatabase } from "@/lib/db";
-import { connectToDatabase } from "@/lib/db";
 import { WorkerModel } from "@/lib/models/Worker";
 import { getAuthenticatedAdmin } from "@/lib/admin-auth";
 import { ensureDatabaseCollections } from "@/lib/models/init";

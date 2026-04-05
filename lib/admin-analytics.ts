@@ -32,6 +32,8 @@ export type AdminAnalytics = {
     amount: number;
     status: string;
     bookingDate: string;
+    serviceName: string;
+    subService: string;
   }>;
 };
 
@@ -108,7 +110,7 @@ export async function getAdminAnalytics(): Promise<AdminAnalytics> {
       },
       { $sort: { _id: 1 } },
     ]),
-    BookingModel.find({}, { amount: 1, status: 1, bookingDate: 1 })
+    BookingModel.find({}, { amount: 1, status: 1, bookingDate: 1, serviceName: 1, subService: 1 })
       .sort({ createdAt: -1 })
       .limit(6)
       .lean(),
@@ -156,6 +158,8 @@ export async function getAdminAnalytics(): Promise<AdminAnalytics> {
       amount: booking.amount,
       status: booking.status,
       bookingDate: new Date(booking.bookingDate).toISOString(),
+      serviceName: (booking as any).serviceName || "Unknown Service",
+      subService: (booking as any).subService || "Unknown",
     })),
   };
 }
